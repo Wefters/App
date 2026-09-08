@@ -1,0 +1,20 @@
+{
+  "name": "app",
+  "permissions": {
+    "android": [],
+    "ios": {}
+  },
+  "methods": [
+    "getInfo",
+    "getState",
+    "getLaunchUrl",
+    "minimizeApp",
+    "exitApp",
+    "relaunchApp",
+    "openUrl",
+    "canOpenUrl",
+    "setBackButtonInterceptEnabled"
+  ],
+  "hooks": [],
+  "events": ["app:stateChange", "app:urlOpen", "app:backButton", "app:lowMemory"]
+}
