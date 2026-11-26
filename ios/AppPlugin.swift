@@ -1,13 +1,18 @@
 import Foundation
 import UIKit
 
+/// App information, lifecycle events and URL handling. Incoming URLs are posted to it as
+/// ``urlOpenNotification``.
 final class AppPlugin: WefterPlugin {
 
+    /// Posted with `url`, `sourceApplication` and `isLaunch` in its user info when the app is opened with a
+    /// URL.
     static let urlOpenNotification = Notification.Name("dev.wefter.plugins.app.openURL")
 
     private var lifecycleState = "active"
     private var launchUrl: String?
 
+    /// Observes lifecycle, memory warning and URL notifications.
     public required init(dispatcher: BridgeDispatcher, viewController: UIViewController?) {
         super.init(dispatcher: dispatcher, viewController: viewController)
 
@@ -33,8 +38,7 @@ final class AppPlugin: WefterPlugin {
         NotificationCenter.default.removeObserver(self)
     }
 
-    // ---- Methods --------------------------------------------------------
-
+    /// Name, bundle id, version, build, debug flag and install times of the app.
     // @WefterMethod
     func getInfo(payload: [String: Any], callback: @escaping (Result<Any, Error>) -> Void) throws {
         let info = Bundle.main.infoDictionary ?? [:]
@@ -62,16 +66,19 @@ final class AppPlugin: WefterPlugin {
         ])
     }
 
+    /// The current lifecycle state.
     // @WefterMethod
     func getState(payload: [String: Any], callback: @escaping (Result<Any, Error>) -> Void) throws {
         resolve(callback, data: ["isActive": lifecycleState == "active", "state": lifecycleState])
     }
 
+    /// The URL the app was launched with, if any.
     // @WefterMethod
     func getLaunchUrl(payload: [String: Any], callback: @escaping (Result<Any, Error>) -> Void) throws {
         resolve(callback, data: ["url": launchUrl ?? NSNull()])
     }
 
+    /// Not allowed on iOS; rejects with `UNIMPLEMENTED`.
     // @WefterMethod
     func minimizeApp(payload: [String: Any], callback: @escaping (Result<Any, Error>) -> Void) throws {
         reject(
@@ -79,13 +86,14 @@ final class AppPlugin: WefterPlugin {
             message: "minimizeApp() is not supported on iOS; Apple prohibits programmatic suspension.")
     }
 
+    /// Terminates the app right after answering.
     // @WefterMethod
     func exitApp(payload: [String: Any], callback: @escaping (Result<Any, Error>) -> Void) throws {
-        // Discouraged by Apple's HIG but supported for kiosk / enterprise builds.
         resolve(callback, data: ["success": true])
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { exit(0) }
     }
 
+    /// Not possible on iOS; rejects with `UNIMPLEMENTED`.
     // @WefterMethod
     func relaunchApp(payload: [String: Any], callback: @escaping (Result<Any, Error>) -> Void) throws {
         reject(
@@ -93,6 +101,7 @@ final class AppPlugin: WefterPlugin {
             message: "iOS cannot relaunch itself; the user must reopen the app.")
     }
 
+    /// Opens a URL with the system.
     // @WefterMethod
     func openUrl(payload: [String: Any], callback: @escaping (Result<Any, Error>) -> Void) throws {
         guard let raw = payload["url"] as? String, let url = URL(string: raw) else {
@@ -110,6 +119,8 @@ final class AppPlugin: WefterPlugin {
         }
     }
 
+    /// Whether some installed app can open a URL. Custom schemes must be listed in
+    /// `LSApplicationQueriesSchemes`.
     // @WefterMethod
     func canOpenUrl(payload: [String: Any], callback: @escaping (Result<Any, Error>) -> Void) throws {
         guard let raw = payload["url"] as? String, let url = URL(string: raw) else {
@@ -121,6 +132,7 @@ final class AppPlugin: WefterPlugin {
         }
     }
 
+    /// iOS has no back button; accepted and ignored.
     // @WefterMethod
     func setBackButtonInterceptEnabled(
         payload: [String: Any], callback: @escaping (Result<Any, Error>) -> Void
@@ -128,11 +140,14 @@ final class AppPlugin: WefterPlugin {
         resolve(callback, data: ["success": true])
     }
 
+    /// Reports a memory warning as `app:lowMemory`.
+    /// Lifecycle notifications, reported as `app:stateChange`.
     @objc private func handleDidBecomeActive() { setState("active") }
     @objc private func handleWillResignActive() { setState("inactive") }
     @objc private func handleDidEnterBackground() { setState("background") }
     @objc private func handleMemoryWarning() { emit("app:lowMemory", ["level": -1]) }
 
+    /// Reports an incoming URL as `app:urlOpen` and remembers it if it launched the app.
     @objc private func handleUrlOpen(_ note: Notification) {
         guard let url = note.userInfo?["url"] as? String, !url.isEmpty else { return }
 
@@ -147,6 +162,7 @@ final class AppPlugin: WefterPlugin {
         emit("app:urlOpen", data)
     }
 
+    /// Records the lifecycle state and emits `app:stateChange` when it changes.
     private func setState(_ state: String) {
         guard lifecycleState != state else { return }
         lifecycleState = state

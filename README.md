@@ -35,13 +35,13 @@ Retrieve display names, bundle identifiers, and build versions:
 
 ```ts
 const info = await App.getInfo();
-console.log(info.name);             // Application display name, e.g. "Wefter Demo"
-console.log(info.id);               // Package or bundle ID, e.g. "dev.wefter.demo"
-console.log(info.version);          // Version string, e.g. "1.0.0"
-console.log(info.build);            // Build counter string, e.g. "42"
-console.log(info.debug);            // Boolean flag indicating debug compilation
+console.log(info.name); // Application display name, e.g. "Wefter Demo"
+console.log(info.id); // Package or bundle ID, e.g. "dev.wefter.demo"
+console.log(info.version); // Version string, e.g. "1.0.0"
+console.log(info.build); // Build counter string, e.g. "42"
+console.log(info.debug); // Boolean flag indicating debug compilation
 console.log(info.firstInstallTime); // Epoch milliseconds (Android only, 0 on iOS)
-console.log(info.lastUpdateTime);   // Epoch milliseconds (Android only, 0 on iOS)
+console.log(info.lastUpdateTime); // Epoch milliseconds (Android only, 0 on iOS)
 ```
 
 ### Lifecycle state
@@ -141,25 +141,25 @@ When at least one listener is registered with `onBackButton`, the Android shell 
 
 ## Platform events
 
-| Event | Payload | Platforms |
-| --- | --- | --- |
+| Event             | Payload                                                                | Platforms    |
+| ----------------- | ---------------------------------------------------------------------- | ------------ |
 | `app:stateChange` | `{ isActive: boolean, state: "active" \| "inactive" \| "background" }` | Android, iOS |
-| `app:urlOpen` | `{ url: string, iosSourceApplication?: string }` | Android, iOS |
-| `app:backButton` | `{ canGoBack: boolean }` | Android |
-| `app:lowMemory` | `{ level: number }` | Android, iOS |
+| `app:urlOpen`     | `{ url: string, iosSourceApplication?: string }`                       | Android, iOS |
+| `app:backButton`  | `{ canGoBack: boolean }`                                               | Android      |
+| `app:lowMemory`   | `{ level: number }`                                                    | Android, iOS |
 
 ## Error codes
 
-| Code | Cause |
-| --- | --- |
-| `INFO_FAILED` | Failed to read package metadata from the operating system. |
-| `NO_ACTIVITY` | An operation requiring a foreground activity was called without one. |
-| `MINIMIZE_FAILED` | Failed to move Android activity to background. |
-| `EXIT_FAILED` | Application termination call failed. |
-| `RELAUNCH_FAILED` | AlarmManager scheduling failed during relaunch attempt on Android. |
-| `INVALID_ARGUMENT` | The provided URL string was empty or malformed. |
-| `NO_HANDLER` | No external application is installed to handle the specified URL scheme. |
-| `UNIMPLEMENTED` | The method is not supported on the target platform (such as minimizeApp on iOS). |
+| Code               | Cause                                                                            |
+| ------------------ | -------------------------------------------------------------------------------- |
+| `INFO_FAILED`      | Failed to read package metadata from the operating system.                       |
+| `NO_ACTIVITY`      | An operation requiring a foreground activity was called without one.             |
+| `MINIMIZE_FAILED`  | Failed to move Android activity to background.                                   |
+| `EXIT_FAILED`      | Application termination call failed.                                             |
+| `RELAUNCH_FAILED`  | AlarmManager scheduling failed during relaunch attempt on Android.               |
+| `INVALID_ARGUMENT` | The provided URL string was empty or malformed.                                  |
+| `NO_HANDLER`       | No external application is installed to handle the specified URL scheme.         |
+| `UNIMPLEMENTED`    | The method is not supported on the target platform (such as minimizeApp on iOS). |
 
 ## Platform implementation notes
 

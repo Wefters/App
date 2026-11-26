@@ -22,6 +22,7 @@ import androidx.activity.OnBackPressedCallback
 import java.lang.ref.WeakReference
 import org.json.JSONObject
 
+/** App information, lifecycle events, URL handling and back button interception. */
 class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         WefterPlugin(context, dispatcher) {
 
@@ -29,10 +30,14 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
     private var currentActivityRef: WeakReference<Activity>? = null
     private var launchUrl: String? = null
 
-    private var backIntercept = true // ON by default — the plugin owns the back button.
+    private var backIntercept = true
     private var backCallback: OnBackPressedCallback? = null
     private var backOwner: WeakReference<ComponentActivity>? = null
 
+    /**
+     * Remembers the launch URL and watches activity lifecycle (for state changes and the back button) and
+     * memory pressure.
+     */
     init {
         (context as? Activity)?.let {
             currentActivityRef = WeakReference(it)
@@ -76,6 +81,7 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         )
     }
 
+    /** Reports a URL the app was opened with while running. */
     fun onExternalUrl(url: String?) {
         if (url.isNullOrEmpty()) return
         if (launchUrl == null) launchUrl = url
@@ -83,6 +89,7 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
     }
 
 
+    /** Name, package name, version, build, debug flag and install times of the app. */
     @WefterMethod
     fun getInfo(payload: JSONObject, callback: (Result<Any>) -> Unit) {
         try {
@@ -112,6 +119,7 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         }
     }
 
+    /** The current lifecycle state. */
     @WefterMethod
     fun getState(payload: JSONObject, callback: (Result<Any>) -> Unit) {
         resolve(
@@ -120,11 +128,13 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         )
     }
 
+    /** The URL the app was launched with, if any. */
     @WefterMethod
     fun getLaunchUrl(payload: JSONObject, callback: (Result<Any>) -> Unit) {
         resolve(callback, JSONObject().put("url", launchUrl ?: JSONObject.NULL))
     }
 
+    /** Moves the app's task to the background. */
     @WefterMethod
     fun minimizeApp(payload: JSONObject, callback: (Result<Any>) -> Unit) {
         val activity = currentActivityRef?.get()
@@ -140,6 +150,7 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         }
     }
 
+    /** Finishes the task and ends the process shortly after answering. */
     @WefterMethod
     fun exitApp(payload: JSONObject, callback: (Result<Any>) -> Unit) {
         try {
@@ -151,6 +162,7 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         }
     }
 
+    /** Schedules the launch activity with an alarm a moment later, then ends the current process. */
     @WefterMethod
     fun relaunchApp(payload: JSONObject, callback: (Result<Any>) -> Unit) {
         try {
@@ -179,6 +191,7 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         }
     }
 
+    /** Opens a URL with whichever app handles it. */
     @WefterMethod
     fun openUrl(payload: JSONObject, callback: (Result<Any>) -> Unit) {
         val url = payload.optString("url", "").trim()
@@ -198,6 +211,7 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         }
     }
 
+    /** Whether some installed app can open a URL. */
     @WefterMethod
     fun canOpenUrl(payload: JSONObject, callback: (Result<Any>) -> Unit) {
         val url = payload.optString("url", "").trim()
@@ -214,6 +228,7 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         }
     }
 
+    /** Turns back button interception on or off. It is on by default. */
     @WefterMethod
     fun setBackButtonInterceptEnabled(payload: JSONObject, callback: (Result<Any>) -> Unit) {
         backIntercept = payload.optBoolean("enabled", true)
@@ -221,6 +236,10 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
     }
 
 
+    /**
+     * Installs the back handler on an activity. While interception is on, a back press emits
+     * `app:backButton`; otherwise it navigates back in the web view or leaves the app.
+     */
     private fun attachBackCallback(activity: Activity) {
         val ca = activity as? ComponentActivity ?: return
         if (backOwner?.get() === ca && backCallback != null) return
@@ -236,7 +255,6 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
                                 emit("app:backButton", JSONObject().put("canGoBack", canGoBack))
                                 return
                             } catch (e: Exception) {
-                                // bridge unreachable — fall through to default so we don't trap
                             }
                         }
                         if (canGoBack) {
@@ -253,6 +271,7 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         backOwner = WeakReference(ca)
     }
 
+    /** Records the lifecycle state and emits `app:stateChange` when it changes. */
     private fun setState(state: String) {
         if (lifecycleState == state) return
         lifecycleState = state
@@ -262,18 +281,20 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         )
     }
 
+    /** Emits an event, ignoring failures (for example before the web view exists). */
     private fun safeEmit(event: String, data: JSONObject) {
         try {
             emit(event, data)
         } catch (e: Exception) {
-            // best-effort — never crash on an emit failure
         }
     }
 
+    /** Ends the process shortly, after the answer has reached JavaScript. */
     private fun scheduleProcessDeath() {
         Handler(Looper.getMainLooper()).postDelayed({ Runtime.getRuntime().exit(0) }, 120L)
     }
 
+    /** Remembers the URL of a `VIEW` intent as the launch URL. */
     private fun captureLaunchUrl(intent: Intent?) {
         if (intent == null) return
         if (intent.action == Intent.ACTION_VIEW) {
@@ -281,11 +302,13 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         }
     }
 
+    /** The web view in an activity's view tree. */
     private fun findWebView(activity: Activity): WebView? {
         val root = activity.window?.decorView as? ViewGroup ?: return null
         return findWebView(root)
     }
 
+    /** Depth-first search for a web view under `view`. */
     private fun findWebView(view: View): WebView? {
         if (view is WebView) return view
         if (view is ViewGroup) {
@@ -299,6 +322,6 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
     }
 
     companion object {
-        private const val RELAUNCH_REQUEST = 0x57454654 // "WEFT"
+        private const val RELAUNCH_REQUEST = 0x57454654
     }
 }
