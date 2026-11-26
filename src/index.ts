@@ -1,7 +1,9 @@
 /**
- * Information about the app and control over it: version details, lifecycle state, the URL it was opened
- * with, opening other apps, and events for state changes, incoming URLs, low memory and the Android back
- * button.
+ * Information about the app and control over it: version details, lifecycle state, opening other apps, and
+ * events for state changes, low memory and the Android back button.
+ *
+ * Deep links into the app are a framework feature: use `onDeepLink` and `getLaunchUrl` from
+ * `@wefterjs/core`.
  */
 
 import { definePlugin, registerHook } from "@wefterjs/core";
@@ -29,19 +31,8 @@ export interface AppState {
   state: AppLifecycleState;
 }
 
-/** The URL the app was opened with, or `null`. */
-export interface AppLaunchUrl {
-  url: string | null;
-}
-
 /** Sent when the app's lifecycle state changes. */
 export type AppStateChangeEvent = AppState;
-
-/** Sent when the app is opened with a URL (deep link) while running. */
-export interface AppUrlOpenEvent {
-  url: string;
-  iosSourceApplication?: string;
-}
 
 /** Sent when the Android back button is pressed while interception is on. */
 export interface AppBackButtonEvent {
@@ -72,7 +63,6 @@ export interface Subscription {
 const native = definePlugin<{
   getInfo: () => Promise<AppInfo>;
   getState: () => Promise<AppState>;
-  getLaunchUrl: () => Promise<AppLaunchUrl>;
   minimizeApp: () => Promise<AppActionResult>;
   exitApp: () => Promise<AppActionResult>;
   relaunchApp: () => Promise<AppActionResult>;
@@ -82,7 +72,6 @@ const native = definePlugin<{
 }>("app", {
   getInfo: true,
   getState: true,
-  getLaunchUrl: true,
   minimizeApp: true,
   exitApp: true,
   relaunchApp: true,
@@ -101,11 +90,6 @@ export const App = {
   /** Whether the app is in the foreground. */
   getState(): Promise<AppState> {
     return native.getState();
-  },
-
-  /** The URL the app was launched with, if any. */
-  getLaunchUrl(): Promise<AppLaunchUrl> {
-    return native.getLaunchUrl();
   },
 
   /**
@@ -140,11 +124,6 @@ export const App = {
   /** Calls `callback` when the app moves between foreground and background. */
   onStateChange(callback: (state: AppStateChangeEvent) => void): Subscription {
     return registerHook("app:stateChange", callback as (data: unknown) => void);
-  },
-
-  /** Calls `callback` when the app is opened with a URL while running. */
-  onUrlOpen(callback: (event: AppUrlOpenEvent) => void): Subscription {
-    return registerHook("app:urlOpen", callback as (data: unknown) => void);
   },
 
   /** Calls `callback` when the system is low on memory. */

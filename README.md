@@ -1,6 +1,6 @@
 # @wefterjs/app
 
-Official Wefter plugin for application lifecycle management, build metadata, deep link handling, hardware back button control, and external URL dispatch.
+Official Wefter plugin for application lifecycle management, build metadata, hardware back button control, and external URL dispatch.
 
 ## Features
 
@@ -61,27 +61,14 @@ Lifecycle states indicate:
 
 ### Deep links
 
-Retrieve the URL used to launch the app on cold start:
+Deep links into the app are a framework feature, handled by the native shell and `@wefterjs/core` rather than this plugin:
 
 ```ts
-const { url } = await App.getLaunchUrl();
-if (url) {
-  console.log("App opened from link:", url);
-}
-```
+import { onDeepLink } from "@wefterjs/core";
 
-Subscribe to deep link openings that occur while the application is already running:
-
-```ts
-const linkSub = App.onUrlOpen(({ url, iosSourceApplication }) => {
-  console.log("Incoming deep link:", url);
-  if (iosSourceApplication) {
-    console.log("Source app:", iosSourceApplication);
-  }
+onDeepLink(({ path, query, isLaunch }) => {
+  router.push({ path, query });
 });
-
-// To stop listening:
-linkSub.remove();
 ```
 
 ### External URL dispatch
@@ -144,7 +131,6 @@ When at least one listener is registered with `onBackButton`, the Android shell 
 | Event             | Payload                                                                | Platforms    |
 | ----------------- | ---------------------------------------------------------------------- | ------------ |
 | `app:stateChange` | `{ isActive: boolean, state: "active" \| "inactive" \| "background" }` | Android, iOS |
-| `app:urlOpen`     | `{ url: string, iosSourceApplication?: string }`                       | Android, iOS |
 | `app:backButton`  | `{ canGoBack: boolean }`                                               | Android      |
 | `app:lowMemory`   | `{ level: number }`                                                    | Android, iOS |
 
@@ -168,13 +154,11 @@ When at least one listener is registered with `onBackButton`, the Android shell 
 - **Lifecycle tracking**: Implemented using `Application.ActivityLifecycleCallbacks` on the host application.
 - **Memory warnings**: Uses `ComponentCallbacks2.onTrimMemory` and `onLowMemory`.
 - **Back button**: Intercepted via `OnBackPressedCallback` registered on the host `ComponentActivity`.
-- **Deep links**: Routed from `Intent.ACTION_VIEW` in `MainActivity.onCreate` and `onNewIntent`.
 
 ### iOS
 
 - **Lifecycle tracking**: Listens to system notifications (`UIApplication.didBecomeActiveNotification`, `willResignActiveNotification`, and `didEnterBackgroundNotification`).
 - **Memory warnings**: Listens to `UIApplication.didReceiveMemoryWarningNotification`.
-- **Deep links**: Forwarded through `UIWindowSceneDelegate` open URL and Universal Link handler callbacks.
 
 ## License
 

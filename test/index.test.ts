@@ -18,7 +18,6 @@ function installAppBridge(overrides: Record<string, unknown> = {}) {
       lastUpdateTime: 1_700_000_500_000,
     },
     getState: { isActive: true, state: "active" },
-    getLaunchUrl: { url: null },
     minimizeApp: { success: true },
     exitApp: { success: true },
     relaunchApp: { success: true },
@@ -66,18 +65,6 @@ describe("App.getState", () => {
   it("returns the tri-state lifecycle phase", async () => {
     installAppBridge({ getState: { isActive: false, state: "background" } });
     expect(await App.getState()).toEqual({ isActive: false, state: "background" });
-  });
-});
-
-describe("App.getLaunchUrl", () => {
-  it("returns null when launched normally", async () => {
-    installAppBridge();
-    expect(await App.getLaunchUrl()).toEqual({ url: null });
-  });
-
-  it("returns the cold-start URL when present", async () => {
-    installAppBridge({ getLaunchUrl: { url: "wefter://auth?token=xyz" } });
-    expect(await App.getLaunchUrl()).toEqual({ url: "wefter://auth?token=xyz" });
   });
 });
 
@@ -161,25 +148,6 @@ describe("App.onStateChange", () => {
     sub.remove();
     emitNative("app:stateChange", { isActive: false, state: "inactive" });
     expect(cb).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe("App.onUrlOpen", () => {
-  it("delivers deep-link events with parsed payload", () => {
-    installAppBridge();
-    const cb = vi.fn();
-    const sub = App.onUrlOpen(cb);
-
-    emitNative("app:urlOpen", {
-      url: "https://wefter.dev/verify?id=9",
-      iosSourceApplication: "com.apple.mobilesafari",
-    });
-    expect(cb).toHaveBeenCalledWith({
-      url: "https://wefter.dev/verify?id=9",
-      iosSourceApplication: "com.apple.mobilesafari",
-    });
-
-    sub.remove();
   });
 });
 

@@ -1,18 +1,13 @@
 import Foundation
 import UIKit
 
-/// App information, lifecycle events and URL handling. Incoming URLs are posted to it as
-/// ``urlOpenNotification``.
+/// App information, lifecycle events and opening other apps. Deep links into the app are handled by the
+/// shell and `@wefterjs/core` (`onDeepLink`).
 final class AppPlugin: WefterPlugin {
 
-    /// Posted with `url`, `sourceApplication` and `isLaunch` in its user info when the app is opened with a
-    /// URL.
-    static let urlOpenNotification = Notification.Name("dev.wefter.plugins.app.openURL")
-
     private var lifecycleState = "active"
-    private var launchUrl: String?
 
-    /// Observes lifecycle, memory warning and URL notifications.
+    /// Observes lifecycle and memory warning notifications.
     public required init(dispatcher: BridgeDispatcher, viewController: UIViewController?) {
         super.init(dispatcher: dispatcher, viewController: viewController)
 
@@ -29,9 +24,6 @@ final class AppPlugin: WefterPlugin {
         center.addObserver(
             self, selector: #selector(handleMemoryWarning),
             name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
-        center.addObserver(
-            self, selector: #selector(handleUrlOpen(_:)),
-            name: AppPlugin.urlOpenNotification, object: nil)
     }
 
     deinit {
@@ -72,11 +64,6 @@ final class AppPlugin: WefterPlugin {
         resolve(callback, data: ["isActive": lifecycleState == "active", "state": lifecycleState])
     }
 
-    /// The URL the app was launched with, if any.
-    // @WefterMethod
-    func getLaunchUrl(payload: [String: Any], callback: @escaping (Result<Any, Error>) -> Void) throws {
-        resolve(callback, data: ["url": launchUrl ?? NSNull()])
-    }
 
     /// Not allowed on iOS; rejects with `UNIMPLEMENTED`.
     // @WefterMethod
@@ -140,27 +127,13 @@ final class AppPlugin: WefterPlugin {
         resolve(callback, data: ["success": true])
     }
 
-    /// Reports a memory warning as `app:lowMemory`.
     /// Lifecycle notifications, reported as `app:stateChange`.
     @objc private func handleDidBecomeActive() { setState("active") }
     @objc private func handleWillResignActive() { setState("inactive") }
     @objc private func handleDidEnterBackground() { setState("background") }
+
+    /// Reports a memory warning as `app:lowMemory`.
     @objc private func handleMemoryWarning() { emit("app:lowMemory", ["level": -1]) }
-
-    /// Reports an incoming URL as `app:urlOpen` and remembers it if it launched the app.
-    @objc private func handleUrlOpen(_ note: Notification) {
-        guard let url = note.userInfo?["url"] as? String, !url.isEmpty else { return }
-
-        if (note.userInfo?["isLaunch"] as? Bool) == true {
-            launchUrl = url
-        }
-
-        var data: [String: Any] = ["url": url]
-        if let source = note.userInfo?["sourceApplication"] as? String, !source.isEmpty {
-            data["iosSourceApplication"] = source
-        }
-        emit("app:urlOpen", data)
-    }
 
     /// Records the lifecycle state and emits `app:stateChange` when it changes.
     private func setState(_ state: String) {

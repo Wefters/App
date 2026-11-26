@@ -22,34 +22,29 @@ import androidx.activity.OnBackPressedCallback
 import java.lang.ref.WeakReference
 import org.json.JSONObject
 
-/** App information, lifecycle events, URL handling and back button interception. */
+/**
+ * App information, lifecycle events, opening other apps and back button interception. Deep links into the
+ * app are handled by the shell and `@wefterjs/core` (`onDeepLink`).
+ */
 class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         WefterPlugin(context, dispatcher) {
 
     private var lifecycleState: String = "active"
     private var currentActivityRef: WeakReference<Activity>? = null
-    private var launchUrl: String? = null
 
     private var backIntercept = true
     private var backCallback: OnBackPressedCallback? = null
     private var backOwner: WeakReference<ComponentActivity>? = null
 
-    /**
-     * Remembers the launch URL and watches activity lifecycle (for state changes and the back button) and
-     * memory pressure.
-     */
+    /** Watches activity lifecycle (for state changes and the back button) and memory pressure. */
     init {
-        (context as? Activity)?.let {
-            currentActivityRef = WeakReference(it)
-            captureLaunchUrl(it.intent)
-        }
+        (context as? Activity)?.let { currentActivityRef = WeakReference(it) }
 
         val app = context.applicationContext as? Application
         app?.registerActivityLifecycleCallbacks(
                 object : Application.ActivityLifecycleCallbacks {
                     override fun onActivityResumed(activity: Activity) {
                         currentActivityRef = WeakReference(activity)
-                        if (launchUrl == null) captureLaunchUrl(activity.intent)
                         attachBackCallback(activity)
                         setState("active")
                     }
@@ -79,13 +74,6 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
                     override fun onConfigurationChanged(newConfig: Configuration) {}
                 }
         )
-    }
-
-    /** Reports a URL the app was opened with while running. */
-    fun onExternalUrl(url: String?) {
-        if (url.isNullOrEmpty()) return
-        if (launchUrl == null) launchUrl = url
-        safeEmit("app:urlOpen", JSONObject().put("url", url))
     }
 
 
@@ -126,12 +114,6 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
                 callback,
                 JSONObject().put("isActive", lifecycleState == "active").put("state", lifecycleState)
         )
-    }
-
-    /** The URL the app was launched with, if any. */
-    @WefterMethod
-    fun getLaunchUrl(payload: JSONObject, callback: (Result<Any>) -> Unit) {
-        resolve(callback, JSONObject().put("url", launchUrl ?: JSONObject.NULL))
     }
 
     /** Moves the app's task to the background. */
@@ -292,14 +274,6 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
     /** Ends the process shortly, after the answer has reached JavaScript. */
     private fun scheduleProcessDeath() {
         Handler(Looper.getMainLooper()).postDelayed({ Runtime.getRuntime().exit(0) }, 120L)
-    }
-
-    /** Remembers the URL of a `VIEW` intent as the launch URL. */
-    private fun captureLaunchUrl(intent: Intent?) {
-        if (intent == null) return
-        if (intent.action == Intent.ACTION_VIEW) {
-            intent.dataString?.let { launchUrl = it }
-        }
     }
 
     /** The web view in an activity's view tree. */

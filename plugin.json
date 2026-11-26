@@ -7,7 +7,6 @@
   "methods": [
     "getInfo",
     "getState",
-    "getLaunchUrl",
     "minimizeApp",
     "exitApp",
     "relaunchApp",
@@ -16,5 +15,5 @@
     "setBackButtonInterceptEnabled"
   ],
   "hooks": [],
-  "events": ["app:stateChange", "app:urlOpen", "app:backButton", "app:lowMemory"]
+  "events": ["app:stateChange", "app:backButton", "app:lowMemory"]
 }
