@@ -119,14 +119,6 @@ final class AppPlugin: WefterPlugin {
         }
     }
 
-    /// iOS has no back button; accepted and ignored.
-    // @WefterMethod
-    func setBackButtonInterceptEnabled(
-        payload: [String: Any], callback: @escaping (Result<Any, Error>) -> Void
-    ) throws {
-        resolve(callback, data: ["success": true])
-    }
-
     /// Lifecycle notifications, reported as `app:stateChange`.
     @objc private func handleDidBecomeActive() { setState("active") }
     @objc private func handleWillResignActive() { setState("inactive") }

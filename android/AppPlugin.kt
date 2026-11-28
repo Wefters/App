@@ -14,17 +14,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.View
-import android.view.ViewGroup
-import android.webkit.WebView
-import androidx.activity.ComponentActivity
-import androidx.activity.OnBackPressedCallback
 import java.lang.ref.WeakReference
 import org.json.JSONObject
 
 /**
- * App information, lifecycle events, opening other apps and back button interception. Deep links into the
- * app are handled by the shell and `@wefterjs/core` (`onDeepLink`).
+ * App information, lifecycle events and opening other apps. Deep links and back are handled by the shell
+ * and `@wefterjs/core` (`onDeepLink`, `onBack`).
  */
 class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         WefterPlugin(context, dispatcher) {
@@ -32,11 +27,7 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
     private var lifecycleState: String = "active"
     private var currentActivityRef: WeakReference<Activity>? = null
 
-    private var backIntercept = true
-    private var backCallback: OnBackPressedCallback? = null
-    private var backOwner: WeakReference<ComponentActivity>? = null
-
-    /** Watches activity lifecycle (for state changes and the back button) and memory pressure. */
+    /** Watches activity lifecycle (for state changes) and memory pressure. */
     init {
         (context as? Activity)?.let { currentActivityRef = WeakReference(it) }
 
@@ -45,7 +36,6 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
                 object : Application.ActivityLifecycleCallbacks {
                     override fun onActivityResumed(activity: Activity) {
                         currentActivityRef = WeakReference(activity)
-                        attachBackCallback(activity)
                         setState("active")
                     }
 
@@ -210,49 +200,6 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
         }
     }
 
-    /** Turns back button interception on or off. It is on by default. */
-    @WefterMethod
-    fun setBackButtonInterceptEnabled(payload: JSONObject, callback: (Result<Any>) -> Unit) {
-        backIntercept = payload.optBoolean("enabled", true)
-        resolve(callback, JSONObject().put("success", true))
-    }
-
-
-    /**
-     * Installs the back handler on an activity. While interception is on, a back press emits
-     * `app:backButton`; otherwise it navigates back in the web view or leaves the app.
-     */
-    private fun attachBackCallback(activity: Activity) {
-        val ca = activity as? ComponentActivity ?: return
-        if (backOwner?.get() === ca && backCallback != null) return
-
-        backCallback?.remove()
-        val cb =
-                object : OnBackPressedCallback(true) {
-                    override fun handleOnBackPressed() {
-                        val wv = findWebView(ca)
-                        val canGoBack = wv?.canGoBack() ?: false
-                        if (backIntercept) {
-                            try {
-                                emit("app:backButton", JSONObject().put("canGoBack", canGoBack))
-                                return
-                            } catch (e: Exception) {
-                            }
-                        }
-                        if (canGoBack) {
-                            wv?.goBack()
-                        } else {
-                            isEnabled = false
-                            ca.onBackPressedDispatcher.onBackPressed()
-                            isEnabled = true
-                        }
-                    }
-                }
-        ca.onBackPressedDispatcher.addCallback(ca, cb)
-        backCallback = cb
-        backOwner = WeakReference(ca)
-    }
-
     /** Records the lifecycle state and emits `app:stateChange` when it changes. */
     private fun setState(state: String) {
         if (lifecycleState == state) return
@@ -274,25 +221,6 @@ class AppPlugin(context: Context, dispatcher: BridgeDispatcher) :
     /** Ends the process shortly, after the answer has reached JavaScript. */
     private fun scheduleProcessDeath() {
         Handler(Looper.getMainLooper()).postDelayed({ Runtime.getRuntime().exit(0) }, 120L)
-    }
-
-    /** The web view in an activity's view tree. */
-    private fun findWebView(activity: Activity): WebView? {
-        val root = activity.window?.decorView as? ViewGroup ?: return null
-        return findWebView(root)
-    }
-
-    /** Depth-first search for a web view under `view`. */
-    private fun findWebView(view: View): WebView? {
-        if (view is WebView) return view
-        if (view is ViewGroup) {
-            for (i in 0 until view.childCount) {
-                findWebView(view.getChildAt(i))?.let {
-                    return it
-                }
-            }
-        }
-        return null
     }
 
     companion object {

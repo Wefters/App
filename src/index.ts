@@ -1,8 +1,8 @@
 /**
  * Information about the app and control over it: version details, lifecycle state, opening other apps, and
- * events for state changes, low memory and the Android back button.
+ * events for state changes and low memory.
  *
- * Deep links into the app are a framework feature: use `onDeepLink` and `getLaunchUrl` from
+ * Deep links and back are framework features: use `onDeepLink`, `getLaunchUrl` and `onBack` from
  * `@wefterjs/core`.
  */
 
@@ -34,11 +34,6 @@ export interface AppState {
 /** Sent when the app's lifecycle state changes. */
 export type AppStateChangeEvent = AppState;
 
-/** Sent when the Android back button is pressed while interception is on. */
-export interface AppBackButtonEvent {
-  canGoBack: boolean;
-}
-
 /** Sent when the system is low on memory. `level` is the Android trim level, or -1 on iOS. */
 export interface AppLowMemoryEvent {
   level: number;
@@ -68,7 +63,6 @@ const native = definePlugin<{
   relaunchApp: () => Promise<AppActionResult>;
   openUrl: (options: { url: string }) => Promise<AppActionResult>;
   canOpenUrl: (options: { url: string }) => Promise<AppCanOpenUrlResult>;
-  setBackButtonInterceptEnabled: (options: { enabled: boolean }) => Promise<AppActionResult>;
 }>("app", {
   getInfo: true,
   getState: true,
@@ -77,7 +71,6 @@ const native = definePlugin<{
   relaunchApp: true,
   openUrl: true,
   canOpenUrl: true,
-  setBackButtonInterceptEnabled: true,
 });
 
 /** The App plugin. */
@@ -129,18 +122,5 @@ export const App = {
   /** Calls `callback` when the system is low on memory. */
   onLowMemory(callback: (event: AppLowMemoryEvent) => void): Subscription {
     return registerHook("app:lowMemory", callback as (data: unknown) => void);
-  },
-
-  /** Calls `callback` when the Android back button is pressed, while interception is on (the default). */
-  onBackButton(callback: (event: AppBackButtonEvent) => void): Subscription {
-    return registerHook("app:backButton", callback as (data: unknown) => void);
-  },
-
-  /**
-   * Turns Android back button interception on or off. It is on by default: the button then no longer
-   * navigates or closes the app, and `App.onBackButton` fires instead. Has no effect on iOS.
-   */
-  setBackButtonInterceptEnabled(enabled: boolean): Promise<AppActionResult> {
-    return native.setBackButtonInterceptEnabled({ enabled });
   },
 };

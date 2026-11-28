@@ -23,7 +23,6 @@ function installAppBridge(overrides: Record<string, unknown> = {}) {
     relaunchApp: { success: true },
     openUrl: { success: true },
     canOpenUrl: { value: true },
-    setBackButtonInterceptEnabled: { success: true },
   };
 
   const handler: Handler = (method, payload) => {
@@ -148,34 +147,6 @@ describe("App.onStateChange", () => {
     sub.remove();
     emitNative("app:stateChange", { isActive: false, state: "inactive" });
     expect(cb).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe("App.onBackButton", () => {
-  it("does not toggle native interception — that is explicit and on by default", () => {
-    const calls = installAppBridge();
-    const sub = App.onBackButton(vi.fn());
-    expect(calls.filter((c) => c.method === "setBackButtonInterceptEnabled")).toHaveLength(0);
-    sub.remove();
-  });
-
-  it("setBackButtonInterceptEnabled forwards the flag", async () => {
-    const calls = installAppBridge();
-    await App.setBackButtonInterceptEnabled(false);
-    expect(calls.find((c) => c.method === "setBackButtonInterceptEnabled")?.payload).toEqual({
-      enabled: false,
-    });
-  });
-
-  it("delivers back-button events while subscribed", () => {
-    installAppBridge();
-    const cb = vi.fn();
-    const sub = App.onBackButton(cb);
-
-    emitNative("app:backButton", { canGoBack: true });
-    expect(cb).toHaveBeenCalledWith({ canGoBack: true });
-
-    sub.remove();
   });
 });
 
