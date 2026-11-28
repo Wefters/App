@@ -1,6 +1,6 @@
 # @wefterjs/app
 
-Official Wefter plugin for application lifecycle management, build metadata, hardware back button control, and external URL dispatch.
+Official Wefter plugin for application lifecycle management, build metadata, and external URL dispatch.
 
 ## Features
 
@@ -9,7 +9,6 @@ Official Wefter plugin for application lifecycle management, build metadata, har
 - Receive custom scheme URLs and Universal Links on cold start and runtime navigation.
 - Open external URLs in third-party applications (browsers, maps, telephone dialers).
 - Respond to operating system low memory pressure warnings.
-- Intercept the Android hardware back button gesture to control in-app routing.
 - Control application process state (minimize, exit, or relaunch).
 
 ## Installation and setup
@@ -109,29 +108,18 @@ const memorySub = App.onLowMemory(({ level }) => {
   console.warn("Low memory warning level:", level);
 });
 
-// Android hardware back button
-const backSub = App.onBackButton(({ canGoBack }) => {
-  if (canGoBack) {
-    history.back();
-  } else {
-    App.exitApp();
-  }
-});
-
 // Remove listeners when unmounting
 stateSub.remove();
 memorySub.remove();
-backSub.remove();
 ```
 
-When at least one listener is registered with `onBackButton`, the Android shell delegates hardware back gestures to your JavaScript handler instead of executing default WebView page backward navigation.
+The Android back button and back gesture, and the iOS swipe back, are handled by the app itself: use `onBack()` from `@wefterjs/core` (see [Back Navigation](https://wefter.dev/docs/app-configuration/back-navigation)).
 
 ## Platform events
 
 | Event             | Payload                                                                | Platforms    |
 | ----------------- | ---------------------------------------------------------------------- | ------------ |
 | `app:stateChange` | `{ isActive: boolean, state: "active" \| "inactive" \| "background" }` | Android, iOS |
-| `app:backButton`  | `{ canGoBack: boolean }`                                               | Android      |
 | `app:lowMemory`   | `{ level: number }`                                                    | Android, iOS |
 
 ## Error codes
@@ -153,7 +141,6 @@ When at least one listener is registered with `onBackButton`, the Android shell 
 
 - **Lifecycle tracking**: Implemented using `Application.ActivityLifecycleCallbacks` on the host application.
 - **Memory warnings**: Uses `ComponentCallbacks2.onTrimMemory` and `onLowMemory`.
-- **Back button**: Intercepted via `OnBackPressedCallback` registered on the host `ComponentActivity`.
 
 ### iOS
 

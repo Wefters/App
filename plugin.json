@@ -11,9 +11,8 @@
     "exitApp",
     "relaunchApp",
     "openUrl",
-    "canOpenUrl",
-    "setBackButtonInterceptEnabled"
+    "canOpenUrl"
   ],
   "hooks": [],
-  "events": ["app:stateChange", "app:backButton", "app:lowMemory"]
+  "events": ["app:stateChange", "app:lowMemory"]
 }
